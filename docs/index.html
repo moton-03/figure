@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snail Figure</title>
+
+<script type="module" src="https://cdn.jsdelivr.net/npm/beercss@3.8.0/dist/cdn/beer.min.js"></script>
+<script type="module"
+  src="https://cdn.jsdelivr.net/npm/material-dynamic-colors@1.1.2/dist/cdn/material-dynamic-colors.min.js"></script>
+<script type="module">
+  import { createApp } from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+
+  createApp({
+    data() {
+      return {
+        htmlCode: "",
+        figures: "",
+        showFigures: false,
+        modeIcon: "light_mode",
+        msg: {},
+        en: {
+          "Figure": "Figure",
+          "Language": "Language",
+          "Dark mode": "Dark mode",
+          "Close": "Close",
+          "Settings": "Settings",
+          "Edit": "Edit",
+          "Links": "Links",
+          "Code": "Code",
+          "Export": "Export",
+        },
+        ja: {
+          "Figure": "図",
+          "Language": "言語",
+          "Dark mode": "ダークモード",
+          "Close": "閉じる",
+          "Settings": "設定",
+          "Edit": "編集",
+          "Links": "リンク",
+          "Code": "コード",
+          "Export": "エクスポート",
+        },
+        ja_kana: {
+          "Figure": "ず",
+          "Language": "げんご",
+          "Dark mode": "ダークモード",
+          "Close": "とじる",
+          "Settings": "せってい",
+          "Edit": "へんしゅう",
+          "Links": "リンク",
+          "Code": "コード",
+          "Export": "エクスポート",
+        },
+      }
+    },
+
+    mounted() {
+      if (!localStorage.getItem("lang")) {
+        localStorage.setItem("lang", "en")
+      }
+      switch (localStorage.getItem("lang")) {
+        case "en":
+          this.msg = this.en
+          break
+        case "ja":
+          this.msg = this.ja
+          break
+        case "ja_kana":
+          this.msg = this.ja_kana
+          break
+      }
+
+      if (!localStorage.getItem("figuresFigures")) {
+        localStorage.setItem("figuresFigures", "")
+      }
+      this.figures = localStorage.getItem("figuresFigures")
+
+      this.updateFigures()
+
+      if (!localStorage.getItem("mode")) {
+        localStorage.setItem("mode", "dark")
+      }
+      if (localStorage.getItem("mode") == "light") {
+        this.modeIcon = "light_mode"
+        ui("mode", "light")
+      } else {
+        this.modeIcon = "dark_mode"
+        ui("mode", "dark")
+      }
+    },
+
+    methods: {
+      updateFigures() {
+        localStorage.setItem("figuresFigures", this.figures)
+
+        if (this.figures == "") {
+          this.showFigures = false
+        } else {
+          this.showFigures = true
+
+          const figures = this.figures.split(/\n/)
+
+          let htmlCode = `<meta name="viewport" content="width=device-width, initial-scale=1.0">\n`
+
+          htmlCode = htmlCode + `<style>
+  body {
+    margin: 0px;
+  }
+
+  article {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center center;
+    height: 100vh;
+    width: 100%;
+  }
+</style>\n`
+
+          htmlCode = htmlCode + `<body>\n`
+
+          figures.forEach(value => {
+            htmlCode = htmlCode + `  <article style="background-image: url(${value});"></article>\n`
+          })
+
+          htmlCode = htmlCode + `</body>\n`
+
+          this.htmlCode = htmlCode
+
+          console.log(this.htmlCode)
+        }
+      },
+
+      changeLang(lang) {
+        localStorage.setItem("lang", lang)
+        switch (localStorage.getItem("lang")) {
+          case "en":
+            this.msg = this.en
+            break
+          case "ja":
+            this.msg = this.ja
+            break
+          case "ja_kana":
+            this.msg = this.ja_kana
+            break
+        }
+      },
+      changeMode() {
+        if (localStorage.getItem("mode") == "light") {
+          this.modeIcon = "dark_mode"
+          localStorage.setItem("mode", "dark")
+          ui("mode", "dark")
+        } else {
+          this.modeIcon = "light_mode"
+          localStorage.setItem("mode", "light")
+          ui("mode", "light")
+        }
+      },
+    },
+  }).mount("#app")
+</script>
+
+<div id="app">
+  <header>
+    <nav>
+      <i>
+        history_edu
+      </i>
+      <h5 class="l">
+        {{ msg["Figure"] }}
+      </h5>
+      <button data-ui="#editFigures" class="transparent circle">
+        <i>
+          edit
+        </i>
+        <div class="tooltip bottom">
+          {{ msg["Edit"] }}
+        </div>
+      </button>
+      <div class="max"></div>
+      <button data-ui="#codeExport" class="transparent circle">
+        <i>
+          ios_share
+        </i>
+        <div class="tooltip bottom">
+          {{ msg["Export"] }}
+        </div>
+      </button>
+      <button data-ui="#settings" class="circle transparent">
+        <i>
+          settings
+        </i>
+        <div class="tooltip bottom">
+          {{ msg["Settings"] }}
+        </div>
+        <menu id="settings" class="left no-wrap">
+          <a @click="changeMode" class="row">
+            <i>
+              {{ modeIcon }}
+            </i>
+            <span>
+              {{ msg["Dark mode"] }}
+            </span>
+          </a>
+          <a data-ui="#language" class="row">
+            <i>
+              translate
+            </i>
+            <span>
+              {{ msg["Language"] }}
+            </span>
+          </a>
+        </menu>
+      </button>
+    </nav>
+  </header>
+
+  <iframe v-if="showFigures" :srcdoc="htmlCode" style="
+    width: 100vw;
+    height: calc(100vh - 64px);
+    border: none;
+  "></iframe>
+
+  <dialog id="editFigures" class="max">
+    <header>
+      <nav>
+        <h6 class="max">
+          {{ msg["Edit"] }}
+        </h6>
+        <button data-ui="#editFigures" @click="updateFigures" class="transparent circle large">
+          <i>
+            close
+          </i>
+          <div class="tooltip bottom">
+            {{ msg["Close"] }}
+          </div>
+        </button>
+      </nav>
+    </header>
+    <div class="field textarea label extra border round">
+      <textarea v-model="figures" style="height: calc(100vh - 24px - 24px - 64px - 16px);"></textarea>
+      <label>
+        {{ msg["Links"] }}
+      </label>
+    </div>
+  </dialog>
+
+  <dialog id="codeExport" class="max">
+    <header>
+      <nav>
+        <h6 class="max">
+          {{ msg["Export"] }}
+        </h6>
+        <button data-ui="#codeExport" @click="updateFigures" class="transparent circle large">
+          <i>
+            close
+          </i>
+          <div class="tooltip bottom">
+            {{ msg["Close"] }}
+          </div>
+        </button>
+      </nav>
+    </header>
+    <div class="field textarea label extra border round">
+      <textarea v-model="htmlCode" style="height: calc(100vh - 24px - 24px - 64px - 16px);" readonly></textarea>
+      <label>
+        {{ msg["Code"] }}
+      </label>
+    </div>
+  </dialog>
+
+  <dialog id="language" class="right no-padding">
+    <nav class="drawer">
+      <header>
+        <nav>
+          <h6 class="max">
+            {{ msg["Language"] }}
+          </h6>
+          <button data-ui="#language" class="transparent circle large">
+            <i>
+              close
+            </i>
+            <div class="tooltip bottom">
+              {{ msg["Close"] }}
+            </div>
+          </button>
+        </nav>
+      </header>
+      <a @click="changeLang('en')">
+        <span>
+          English
+        </span>
+      </a>
+      <a @click="changeLang('ja')">
+        <span>
+          日本語
+        </span>
+      </a>
+      <a @click="changeLang('ja_kana')">
+        <span>
+          にほんご
+        </span>
+      </a>
+    </nav>
+  </dialog>
+</div>
+
+<link href="https://cdn.jsdelivr.net/npm/beercss@3.8.0/dist/cdn/beer.min.css" rel="stylesheet">
