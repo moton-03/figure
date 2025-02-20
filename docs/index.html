@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snail Figure</title>
+<title>Figure</title>
 
 <script type="module" src="https://cdn.jsdelivr.net/npm/beercss@3.8.0/dist/cdn/beer.min.js"></script>
 <script type="module"
@@ -11,9 +11,11 @@
   createApp({
     data() {
       return {
-        htmlCode: "",
         figures: "",
+        currentImageLink: "",
+        currentFiguresIndex: 0,
         showFigures: false,
+        figuresArray: [],
         modeIcon: "light_mode",
         msg: {},
         en: {
@@ -24,8 +26,7 @@
           "Settings": "Settings",
           "Edit": "Edit",
           "Links": "Links",
-          "Code": "Code",
-          "Export": "Export",
+          "Image not found.": "Image not found.",
         },
         ja: {
           "Figure": "図",
@@ -35,8 +36,7 @@
           "Settings": "設定",
           "Edit": "編集",
           "Links": "リンク",
-          "Code": "コード",
-          "Export": "エクスポート",
+          "Image not found.": "画像が見つかりません。",
         },
         ja_kana: {
           "Figure": "ず",
@@ -46,8 +46,7 @@
           "Settings": "せってい",
           "Edit": "へんしゅう",
           "Links": "リンク",
-          "Code": "コード",
-          "Export": "エクスポート",
+          "Image not found.": "画像 (がぞう) が見 (み) つかりません。",
         },
       }
     },
@@ -72,6 +71,10 @@
         localStorage.setItem("figuresFigures", "")
       }
       this.figures = localStorage.getItem("figuresFigures")
+      if (!localStorage.getItem("figuresSlide")) {
+        localStorage.setItem("figuresSlide", 1)
+      }
+      this.currentFiguresIndex = localStorage.getItem("figuresSlide")
 
       this.updateFigures()
 
@@ -85,6 +88,56 @@
         this.modeIcon = "dark_mode"
         ui("mode", "dark")
       }
+
+      // AI code START
+
+      let elem = this.$refs.fullScreenSwipeArea
+
+      let startX, startY, moveX, moveY;
+      const minDistance = 30;
+
+      function handleStart(e) {
+        startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+        startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+      }
+
+      function handleMove(e) {
+        if (!startX || !startY) return;
+        moveX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+        moveY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+      }
+
+      const handleEnd = () => {
+        if (startX - moveX > minDistance) {
+          this.fullScreenNextFigure();
+        } else if (moveX - startX > minDistance) {
+          this.fullScreenBackFigure();
+        }
+        startX = startY = moveX = moveY = null;
+      };
+
+      elem.addEventListener("mousedown", handleStart);
+      elem.addEventListener("mousemove", handleMove);
+      elem.addEventListener("mouseup", handleEnd);
+      elem.addEventListener("touchstart", handleStart);
+      elem.addEventListener("touchmove", handleMove);
+      elem.addEventListener("touchend", handleEnd);
+
+      // AI code END
+
+      window.addEventListener("keydown", (e) => {
+        switch (e.key) {
+          case "ArrowRight":
+            this.fullScreenNextFigure()
+            break
+          case " ":
+            this.fullScreenNextFigure()
+            break
+          case "ArrowLeft":
+            this.fullScreenBackFigure()
+            break
+        }
+      })
     },
 
     methods: {
@@ -96,36 +149,24 @@
         } else {
           this.showFigures = true
 
-          const figures = this.figures.split(/\n/)
-
-          let htmlCode = `<meta name="viewport" content="width=device-width, initial-scale=1.0">\n`
-
-          htmlCode = htmlCode + `<style>
-  body {
-    margin: 0px;
-  }
-
-  article {
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center center;
-    height: 100vh;
-    width: 100%;
-  }
-</style>\n`
-
-          htmlCode = htmlCode + `<body>\n`
-
-          figures.forEach(value => {
-            htmlCode = htmlCode + `  <article style="background-image: url(${value});"></article>\n`
-          })
-
-          htmlCode = htmlCode + `</body>`
-
-          this.htmlCode = htmlCode
-
-          console.log(this.htmlCode)
+          this.figuresArray = this.figures.split(/\n/)
         }
+      },
+      fullScreenBackFigure() {
+        if (this.currentFiguresIndex != 0) {
+          const index = this.currentFiguresIndex - 1
+          this.setFullScreen(this.figuresArray[index], index)
+        }
+      },
+      fullScreenNextFigure() {
+        if (this.currentFiguresIndex != this.figuresArray.length - 1) {
+          const index = this.currentFiguresIndex + 1
+          this.setFullScreen(this.figuresArray[index], index)
+        }
+      },
+      setFullScreen(figure, figureIndex) {
+        this.currentFiguresIndex = figureIndex
+        this.currentImageLink = figure
       },
 
       changeLang(lang) {
@@ -163,7 +204,7 @@
       <i>
         history_edu
       </i>
-      <h5>
+      <h5 class="l m">
         {{ msg["Figure"] }}
       </h5>
       <button data-ui="#editFigures" class="transparent circle">
@@ -175,14 +216,6 @@
         </div>
       </button>
       <div class="max"></div>
-      <button data-ui="#codeExport" class="transparent circle">
-        <i>
-          ios_share
-        </i>
-        <div class="tooltip bottom">
-          {{ msg["Export"] }}
-        </div>
-      </button>
       <button data-ui="#settings" class="circle transparent">
         <i>
           settings
@@ -212,11 +245,59 @@
     </nav>
   </header>
 
-  <iframe v-if="showFigures" :srcdoc="htmlCode" style="
-    width: 100vw;
-    height: calc(100vh - 64px);
-    border: none;
-  "></iframe>
+  <div class="scroll" style="
+    width: 100%;
+    height: calc(100vh - 64px - 16px);
+  ">
+    <div v-if="showFigures" class="grid no-space">
+      <img v-for="(figure, index) in figuresArray" data-ui="#fullScreen" @click="setFullScreen(figure, index)"
+        class="l3 m4 s6" :src="figure" :alt="msg['Image not found.']" style="
+      object-fit: contain;
+      width: 100%;
+      height: 100%;
+    ">
+    </div>
+  </div>
+
+  <dialog id="fullScreen" class="max">
+    <header>
+      <nav>
+        <button @click="fullScreenBackFigure" class="transparent circle large">
+          <i>
+            arrow_back_ios
+          </i>
+        </button>
+        <button @click="fullScreenNextFigure" class="transparent circle large">
+          <i>
+            arrow_forward_ios
+          </i>
+        </button>
+        <div class="max"></div>
+        <button data-ui="#fullScreen" class="transparent circle large">
+          <i>
+            close
+          </i>
+          <div class="tooltip bottom">
+            {{ msg["Close"] }}
+          </div>
+        </button>
+      </nav>
+    </header>
+    <div style="position: relative;">
+      <img :src="currentImageLink" :alt="msg['Image not found.']" style="
+        object-fit: contain;
+        width: 100%;
+        height: calc(100vh - 24px - 24px - 64px - 16px);
+      ">
+      <div ref="fullScreenSwipeArea" style="
+        width: 100%;
+        height: calc(100vh - 24px - 24px - 64px - 16px);
+        position: absolute;
+        top: 0px;
+        left: 0px;
+      "></div>
+    </div>
+  </dialog>
 
   <dialog id="editFigures" class="max">
     <header>
@@ -238,30 +319,6 @@
       <textarea v-model="figures" style="height: calc(100vh - 24px - 24px - 64px - 16px);"></textarea>
       <label>
         {{ msg["Links"] }}
-      </label>
-    </div>
-  </dialog>
-
-  <dialog id="codeExport" class="max">
-    <header>
-      <nav>
-        <h6 class="max">
-          {{ msg["Export"] }}
-        </h6>
-        <button data-ui="#codeExport" @click="updateFigures" class="transparent circle large">
-          <i>
-            close
-          </i>
-          <div class="tooltip bottom">
-            {{ msg["Close"] }}
-          </div>
-        </button>
-      </nav>
-    </header>
-    <div class="field textarea label extra border round">
-      <textarea v-model="htmlCode" style="height: calc(100vh - 24px - 24px - 64px - 16px);" readonly></textarea>
-      <label>
-        {{ msg["Code"] }}
       </label>
     </div>
   </dialog>
